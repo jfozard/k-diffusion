@@ -177,15 +177,44 @@ def main():
         if not args.grow_config:
             raise ValueError('--grow requires --grow-config')
         ckpt = torch.load(args.grow, map_location='cpu')
-        old_config = K.config.load_config(open(args.grow_config))
-        old_inner_model = K.config.make_model(old_config)
-        old_inner_model.load_state_dict(ckpt['model_ema'])
+
+        print('old_keys', [(k, v.shape) for k,v in ckpt['model'].items()])
+        print('keys', [(k, v.shape) for k, v in inner_model.state_dict().items()])
+        
+        
+        #quit()
+        
+        #old_config = K.config.load_config(open(args.grow_config))
+        #old_inner_model = K.config.make_model(old_config)
+        
+
+        
+
+        new_ckpt = {}
+        for k, v in ckpt['model'].items():
+            if 'd_blocks' not in k:
+                new_ckpt[k] = v
+            else:
+                u = k.split('.')
+                idx = k.split('.')[3]
+                new_k = '.'.join(u[:3])+'.' +str(int(idx)+1) + '.' + '.'.join(u[4:])
+                new_ckpt[new_k] = v
+ 
+        
+        
+        inner_model.load_state_dict(new_ckpt, strict=False)
+
+       # quit()
+        
+        
+        """
         if old_config['model']['skip_stages'] != model_config['skip_stages']:
             old_inner_model.set_skip_stages(model_config['skip_stages'])
         if old_config['model']['patch_size'] != model_config['patch_size']:
             old_inner_model.set_patch_size(model_config['patch_size'])
         inner_model.load_state_dict(old_inner_model.state_dict())
-        del ckpt, old_inner_model
+        """
+        del ckpt, new_ckpt #old_inner_model
 
     inner_model, inner_model_ema, opt, train_dl = accelerator.prepare(inner_model, inner_model_ema, opt, train_dl)
     if use_wandb:
