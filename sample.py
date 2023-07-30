@@ -10,6 +10,7 @@ import torch
 from tqdm import trange, tqdm
 
 import k_diffusion as K
+import torchvision.utils as utils
 
 
 def main():
@@ -27,6 +28,7 @@ def main():
                    help='the output prefix')
     p.add_argument('--steps', type=int, default=50,
                    help='the number of denoising steps')
+    p.add_argument('--grid', action="store_true", help='export images in a grid')
     args = p.parse_args()
 
     config = K.config.load_config(open(args.config))
@@ -59,15 +61,24 @@ def main():
 
         def sample_fn(n):
             x = torch.randn([n, model_config['input_channels'], size[0], size[1]], device=device) * sigma_max
-            x_0 = K.sampling.sample_dpm_2(model, x, sigmas, s_tmin=0., s_tmax=float('inf'), s_noise=1.003, s_churn=(40/256)*args.steps, disable=not accelerator.is_local_main_process)
-            #x_0 = K.sampling.sample_euler(model, x, sigmas, disable=not accelerator.is_local_main_process)
+            #x_0 = K.sampling.sample_dpm_2(model, x, sigmas, s_tmin=0., s_tmax=float('inf'), s_noise=1.003, s_churn=(40/256)*args.steps, disable=not accelerator.is_local_main_process)
+            x_0 = K.sampling.sample_lms(model, x, sigmas, disable=not accelerator.is_local_main_process)
             return x_0
         x_0 = K.evaluation.compute_features(accelerator, sample_fn, lambda x: x, args.n, args.batch_size)
-        if accelerator.is_main_process:
-            for i, out in enumerate(x_0):
-                filename = f'{args.prefix}_{i:05}.png'
-                K.utils.to_pil_image(out).save(filename)
 
+        if args.grid:
+            if accelerator.is_main_process:
+                filename = f'{args.prefix}.png'
+                grid = utils.make_grid(x_0, nrow=math.ceil(args.n ** 0.5), padding=0)
+                K.utils.to_pil_image(grid).save(filename)
+
+        else:
+            if accelerator.is_main_process:
+                for i, out in enumerate(x_0):
+                    filename = f'{args.prefix}_{i:05}.png'
+                    K.utils.to_pil_image(out).save(filename)
+
+                
     try:
         run()
     except KeyboardInterrupt:
