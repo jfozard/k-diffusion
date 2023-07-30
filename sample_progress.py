@@ -57,9 +57,13 @@ def main():
         random_sigmas =  torch.exp(-1.2 + 1.2*torch.randn((100,)))
         print('random sigmas', random_sigmas)
 
+        progress = []
+        def callback(u):
+            progress.append(u['denoised'].clip(-1.0,1.0).cpu())
+        
         def sample_fn(n):
             x = torch.randn([n, model_config['input_channels'], size[0], size[1]], device=device) * sigma_max
-            x_0 = K.sampling.sample_dpm_2(model, x, sigmas, s_tmin=0., s_tmax=float('inf'), s_noise=1.003, s_churn=(40/256)*args.steps, disable=not accelerator.is_local_main_process)
+            x_0 = K.sampling.sample_dpm_2(model, x, sigmas, s_tmin=0., s_tmax=float('inf'), s_noise=1.003, s_churn=(40/256)*args.steps, disable=not accelerator.is_local_main_process, callback=callback)
             #x_0 = K.sampling.sample_euler(model, x, sigmas, disable=not accelerator.is_local_main_process)
             return x_0
         x_0 = K.evaluation.compute_features(accelerator, sample_fn, lambda x: x, args.n, args.batch_size)
@@ -67,7 +71,11 @@ def main():
             for i, out in enumerate(x_0):
                 filename = f'{args.prefix}_{i:05}.png'
                 K.utils.to_pil_image(out).save(filename)
-
+            for i, out in enumerate(progress):
+                for j, v in enumerate(out):
+                    filename = f'{args.prefix}_{j:03}_{i:03}.png'
+                    K.utils.to_pil_image(v).save(filename)
+                    
     try:
         run()
     except KeyboardInterrupt:
