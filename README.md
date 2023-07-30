@@ -2,6 +2,70 @@
 
 An implementation of [Elucidating the Design Space of Diffusion-Based Generative Models](https://arxiv.org/abs/2206.00364) (Karras et al., 2022) for PyTorch. The patching method in [Improving Diffusion Model Efficiency Through Patching](https://arxiv.org/abs/2207.04316) is implemented as well.
 
+## Sample results
+
+Checkpoint at https://huggingface.co/JFoz/k-diffusion-cars
+
+Training on SRN cars dataset.
+
+Initial training at 64x64, batch size 64
+```
+python train.py --config configs/config_64_cars_simpler.json --name car_skip_2
+```
+(520k steps)
+
+Restarted with lower learning rate
+```
+python train.py --config configs/config_64_cars_1e5.json --name car_skip_3 --resume car_skip_2_00200000.pth
+```
+(50k steps)
+
+Network expanded to 128x128 input, removing first stage skip.
+```
+python train.py --name grow --grow car_skip_3_00250000.pth --grow-config configs/config_64_cars_simpler.json --config configs/config_64_cars_simpler_grow.json --name grow_cars --batch-size 16
+```
+Restarted with gradient accumulation (4, then 16 steps) - retaining optimizer state (I think)
+```
+python train.py --name grow --config configs/config_64_cars_simpler_grow.json --name grow_cars --batch-size 16 --grad-accum-steps 4
+```
+```
+python train.py --name grow --config configs/config_64_cars_simpler_grow.json --name grow_cars --batch-size 16 --grad-accum-steps 16
+```
+(160k steps total at 128)
+
+Some training details not recorded - was concerned by poor sampling results (see below)
+
+### Samples
+
+LMS sampling, 256 steps
+
+![cars_det](https://github.com/jfozard/k-diffusion/assets/4390954/28e2a548-35ff-437d-b334-082c623ccbfe)
+
+Video:
+https://github.com/jfozard/k-diffusion/assets/4390954/c3dbf8b7-50be-431f-9d92-978362349c24
+
+
+
+
+Following the EDM repository settings for ImageNet, tried a stochastic sampler. One eyeball norm appear better.
+
+
+
+
+DPM_2 sampling (stochastic), with churn 40, S_noise 1.003
+
+![cars_dpm_2](https://github.com/jfozard/k-diffusion/assets/4390954/1d88c982-5969-4716-86bb-871dea9fe15f)
+
+Video:
+
+
+https://github.com/jfozard/k-diffusion/assets/4390954/973f6190-48c4-4313-b81b-f5a8abc8d701
+
+
+
+
+
+
 ## Installation
 
 `k-diffusion` can be installed via PyPI (`pip install k-diffusion`) but it will not include training and inference scripts, only library code that others can depend on. To run the training and inference scripts, clone this repository and run `pip install -e <path to repository>`.
