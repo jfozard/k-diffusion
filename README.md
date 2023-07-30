@@ -42,6 +42,7 @@ LMS sampling, 256 steps
 ![cars_det](https://github.com/jfozard/k-diffusion/assets/4390954/28e2a548-35ff-437d-b334-082c623ccbfe)
 
 Video:
+
 https://github.com/jfozard/k-diffusion/assets/4390954/c3dbf8b7-50be-431f-9d92-978362349c24
 
 
@@ -57,7 +58,6 @@ DPM_2 sampling (stochastic), with churn 40, S_noise 1.003
 ![cars_dpm_2](https://github.com/jfozard/k-diffusion/assets/4390954/1d88c982-5969-4716-86bb-871dea9fe15f)
 
 Video:
-
 
 https://github.com/jfozard/k-diffusion/assets/4390954/973f6190-48c4-4313-b81b-f5a8abc8d701
 
